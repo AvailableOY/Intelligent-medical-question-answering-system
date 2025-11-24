@@ -1,0 +1,585 @@
+<template>
+	<!-- 主容器：整体页面布局 -->
+	<view class="container">
+		<!-- 顶部导航栏 -->
+		<view class="nav-bar">
+			<!-- 左侧图标：历史记录 -->
+			<image class="nav-icon" src="../../static/history.png" mode="widthFix" @tap="toggle('left')"></image>
+			<!-- 中间标题 -->
+			<text class="nav-title">新对话</text>
+			<!-- 右侧图标：新建对话 -->
+			<image class="nav-icon" src="../../static/new.png" mode="widthFix" @tap="newChat"></image>
+		</view>
+		<view class="nav-bar-empty"></view>
+
+		<!-- 显示对话记录 -->
+		<view class="message-container" v-if="chatLists.length > 0">
+			<!-- 占位符 -->
+			<view class="nav-bar-empty"> </view>
+			<template v-for="(chat,ind) in chatLists">
+				<!--用户消息 -->
+				<view class="message-item user-message" v-if="chat.role == 'user'">
+					<image class="avatar" :src="''" mode="aspectFill"></image>
+					<view class="message-content">
+						<text class="message-text">{{chat.content}}</text>
+					</view>
+				</view>
+				<!--回复消息 -->
+				<view class="message-item reply-message" v-if="chat.role == 'assistant'">
+					<image class="avatar" :src="'../../static/IKUN.jpg'" mode="aspectFill"></image>
+					<view class="message-content wbg">
+						<!-- <zero-markdown-view :markdown="chat.content" :aiMode='true'></zero-markdown-view> -->
+						<text class="message-text">{{chat.content}}</text>
+					</view>
+				</view>
+			</template>
+			<view class="tmp-bottom"> 我是贝利亚大王666666666666666666666666</view>
+		</view>
+
+		<!-- 中间主内容区域：展示Logo和欢迎信息 -->
+		<view class="main-content" v-else>
+			<!-- DeepSeek 的 Logo 图标 -->
+			<image class="logo" src="../../static/ds.png" mode="widthFix"></image>
+			<!-- 欢迎语 -->
+			<text class="welcome">嗨！我是 DeepSeek</text>
+			<!-- 功能介绍提示 -->
+			<text class="desc">
+				我可以帮你搜索、答疑、写作，请把你的任务交给我吧~
+			</text>
+		</view>
+		<!-- 普通弹窗 -->
+		<uni-popup ref="popup" background-color="#fff" @change="change">
+			<view class="popup-content" :class="{ 'popup-height': type === 'left' || type === 'right' }"><text
+					class="text">popup 内容</text></view>
+		</uni-popup>
+		<!-- 底部输入区域 -->
+		<view class="input-area">
+			<!-- 消息输入框 -->
+			<input class="msg-input" v-model="msg" placeholder="给 DeepSeek 发送消息"
+				placeholder-class="input-placeholder" />
+			<!-- 输入区域下方的操作选项 -->
+			<view class="input-options">
+				<!-- 选项1：深度思考 (R1) -->
+				<view class="option" @tap="deepThinking" :style="{backgroundColor:ds_bgc}">
+					<image class="option-icon" src="../../static/dt.png" mode="widthFix"></image>
+					<text class="option-text">深度思考 (R1)</text>
+				</view>
+				<!-- 选项2：联网搜索 -->
+				<view class="option">
+					<image class="option-icon" src="../../static/web.png" mode="widthFix"></image>
+					<text class="option-text">联网搜索</text>
+				</view>
+				<!-- 附件上传按钮 -->
+				<view class="file">
+					<image class="add-icon" src="../../static/add.png" mode="widthFix"></image>
+				</view>
+				<!-- 发送消息按钮 -->
+				<view class="send" @tap="sendMsg">
+					<image class="send-icon" src="../../static/send.png" mode="widthFix"></image>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<style>
+	.tmp-bottom {
+		height: 220rpx;
+		background-color: #2bff20;
+	}
+
+	/* 页面根容器：全屏高度，白色背景 */
+	.container {
+		display: flex;
+		/* 使用弹性布局 */
+		flex-direction: column;
+		/* 垂直方向排列子元素 */
+		height: 100vh;
+		/* 占满整个视口高度 */
+		background-color: #ffffff;
+		/* 白色背景 */
+	}
+
+	/* 顶部导航栏样式 */
+	.nav-bar {
+		position: fixed;
+		/* 固定定位，始终在顶部 */
+		left: 0;
+		right: 0;
+		top: 0;
+		/* 确保贴顶 */
+		display: flex;
+		flex-direction: row;
+		/* 水平排列 */
+		justify-content: space-between;
+		/* 两端对齐 */
+		align-items: center;
+		/* 垂直居中 */
+		height: 100rpx;
+		/* 高度为100rpx（响应式单位） */
+		padding: 0 30rpx;
+		/* 左右内边距 */
+		border-bottom: 1rpx solid #f0f0f0;
+		/* 底部浅灰色分割线 */
+		background-color: #ffffff;
+		/* 白色背景，避免内容穿透 */
+		z-index: 1000;
+		/* 层级高于其他内容 */
+	}
+
+	/* 导航栏图标样式 */
+	.nav-icon {
+		width: 40rpx;
+		height: 40rpx;
+		/* 固定图标大小 */
+	}
+
+	/* 导航栏标题样式 */
+	.nav-title {
+		font-size: 32rpx;
+		/* 字体大小 */
+		font-weight: bold;
+		/* 加粗 */
+		color: #000000;
+		/* 黑色文字 */
+	}
+
+	/* 中间主内容区域 */
+	.main-content {
+		flex: 1;
+		/* 占据剩余空间 */
+		justify-content: center;
+		/* 垂直居中 */
+		align-items: center;
+		/* 水平居中 */
+		text-align: center;
+		/* 文本居中 */
+		display: flex;
+		flex-direction: column;
+		/* 垂直排列 Logo、标题、描述 */
+		padding-top: 140rpx;
+		/* 避开固定导航栏遮挡 */
+		padding-bottom: 120rpx;
+		/* 避开底部输入框遮挡 */
+	}
+
+	/* Logo 图标样式 */
+	.logo {
+		width: 120rpx;
+		height: 120rpx;
+		margin-bottom: 30rpx;
+		/* 下方留白 */
+	}
+
+	/* 欢迎语样式 */
+	.welcome {
+		font-size: 36rpx;
+		font-weight: bold;
+		color: #000000;
+		margin-bottom: 20rpx;
+	}
+
+	/* 描述文本样式 */
+	.desc {
+		font-size: 28rpx;
+		color: #999999;
+		/* 灰色文字 */
+		line-height: 48rpx;
+		/* 行高 */
+		padding: 0 80rpx;
+		/* 左右留白，防止贴边 */
+	}
+
+	/* 底部输入区域（固定在底部） */
+	.input-area {
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		z-index: 1000;
+		/* 置于顶层，避免被遮挡 */
+		width: 690rpx;
+		/* 宽度略小于屏幕 */
+		padding: 20rpx 30rpx;
+		/* 内边距 */
+		border-top: 1rpx solid #f0f0f0;
+		/* 顶部分割线 */
+		background-color: #ffffff;
+		/* 白色背景 */
+		display: flex;
+		flex-direction: column;
+		/* 垂直布局：输入框 + 操作栏 */
+	}
+
+	/* 消息输入框样式 */
+	.msg-input {
+		width: 610rpx;
+		/* 输入框宽度 */
+		height: 80rpx;
+		/* 高度 */
+		border-radius: 40rpx;
+		/* 圆角，胶囊形状 */
+		background-color: #f7f7f7;
+		/* 浅灰色背景 */
+		padding: 0 30rpx;
+		/* 内边距 */
+		font-size: 28rpx;
+		/* 字体大小 */
+		margin-bottom: 20rpx;
+		/* 下方留空 */
+		color: #333333;
+		/* 输入文字颜色 */
+	}
+
+	/* 输入框占位符样式 */
+	.input-placeholder {
+		color: #999999;
+		/* 灰色占位符文字 */
+		font-size: 28rpx;
+	}
+
+	/* 输入区域下方的操作按钮组 */
+	.input-options {
+		display: flex;
+		flex-direction: row;
+		/* 水平排列按钮 */
+		align-items: center;
+		/* 垂直居中 */
+		justify-content: space-between;
+		/* 两端对齐，send靠右 */
+	}
+
+	/* 每个功能选项（如深度思考、联网搜索） */
+	.option {
+		display: flex;
+		flex-direction: row;
+		/* 图标+文字水平排列 */
+		align-items: center;
+		background-color: #f7f7f7;
+		/* 浅灰背景 */
+		border-radius: 30rpx;
+		/* 圆角 */
+		padding: 10rpx 20rpx;
+		/* 内边距 */
+		margin-right: 20rpx;
+		/* 与其他选项间隔 */
+	}
+
+	/* 选项中的图标 */
+	.option-icon {
+		width: 36rpx;
+		height: 36rpx;
+		margin-right: 10rpx;
+		/* 图标与文字间距 */
+	}
+
+	/* 选项中的文字 */
+	.option-text {
+		font-size: 26rpx;
+		color: #333333;
+		/* 深灰色文字 */
+	}
+
+	/* 发送按钮容器 */
+	.send {
+		width: 60rpx;
+		height: 60rpx;
+		background-color: aqua;
+		/* 临时背景色（可替换为品牌色） */
+		border-radius: 50%;
+		/* 圆形 */
+		display: flex;
+		justify-content: center;
+		/* 水平居中 */
+		align-items: center;
+		/* 垂直居中 */
+	}
+
+	/* 发送图标 */
+	.send-icon {
+		width: 50rpx;
+		height: 50rpx;
+		/* 图标略小于容器 */
+	}
+
+	/* 添加文件按钮图标 */
+	.add-icon {
+		width: 45rpx;
+		height: 45rpx;
+		/* 图标大小 */
+	}
+</style>
+
+<style scoped>
+	.nav-bar-empty {
+		height: 120rpx;
+	}
+
+	.message-container {
+		display: flex;
+		flex-direction: column;
+		padding: 16rpx;
+	}
+
+	.message-item {
+		display: flex;
+		margin-bottom: 24rpx;
+	}
+
+	.user-message {
+		justify-content: flex-end;
+	}
+
+	.reply-message {
+		justify-content: flex-start;
+	}
+
+	.avatar {
+		width: 80rpx;
+		height: 80rpx;
+		min-width: 80rpx;
+		border-radius: 50%;
+		margin: 0 16rpx;
+	}
+
+	.message-content {
+		background-color: #e5f2ff;
+		/* 用户消息浅蓝色背景，可按需调整 */
+		padding: 16rpx;
+		border-radius: 20rpx;
+		max-width: 560rpx;
+		/* 限制消息内容宽度，可按需调整 */
+	}
+
+	.wbg {
+		background-color: #fff;
+	}
+
+	.message-text {
+		font-size: 32rpx;
+		color: #333;
+	}
+</style>
+<style lang="scss">
+	@mixin flex {
+		/* #ifndef APP-NVUE */
+		display: flex;
+		/* #endif */
+		flex-direction: row;
+	}
+
+	@mixin height {
+		/* #ifndef APP-NVUE */
+		height: 100%;
+		/* #endif */
+		/* #ifdef APP-NVUE */
+		flex: 1;
+		/* #endif */
+	}
+
+	.box {
+		@include flex;
+	}
+
+	.button {
+		@include flex;
+		align-items: center;
+		justify-content: center;
+		flex: 1;
+		height: 35px;
+		margin: 0 5px;
+		border-radius: 5px;
+	}
+
+	.example-body {
+		background-color: #fff;
+		padding: 10px 0;
+	}
+
+	.button-text {
+		color: #fff;
+		font-size: 12px;
+	}
+
+	.popup-content {
+		@include flex;
+		align-items: center;
+		justify-content: center;
+		padding: 30rpx;
+		height: 100rpx;
+		background-color: #fff;
+	}
+
+	.popup-height {
+		@include height;
+		width: 600rpx;
+	}
+
+	.text {
+		font-size: 12px;
+		color: #333;
+	}
+
+	.popup-success {
+		color: #fff;
+		background-color: #e1f3d8;
+	}
+
+	.popup-warn {
+		color: #fff;
+		background-color: #faecd8;
+	}
+
+	.popup-error {
+		color: #fff;
+		background-color: #fde2e2;
+	}
+
+	.popup-info {
+		color: #fff;
+		background-color: #f2f6fc;
+	}
+
+	.success-text {
+		color: #09bb07;
+	}
+
+	.warn-text {
+		color: #e6a23c;
+	}
+
+	.error-text {
+		color: #f56c6c;
+	}
+
+	.info-text {
+		color: #909399;
+	}
+
+	.dialog,
+	.share {
+		/* #ifndef APP-NVUE */
+		display: flex;
+		/* #endif */
+		flex-direction: column;
+	}
+
+	.dialog-box {
+		padding: 10px;
+	}
+
+	.dialog .button,
+	.share .button {
+		/* #ifndef APP-NVUE */
+		width: 100%;
+		/* #endif */
+		margin: 0;
+		margin-top: 10px;
+		padding: 3px 0;
+		flex: 1;
+	}
+
+	.dialog-text {
+		font-size: 14px;
+		color: #333;
+	}
+</style>
+
+
+<!-- 行为层：Vue 组件逻辑 -->
+<script>
+	export default {
+		// 数据部分（当前为空）
+		data() {
+			return {
+				dt_bgc:"#f7f7f7",
+				// 可在此添加输入框内容、消息列表等数据
+				msg: "",
+				type: 'center',
+				chatLists: [
+
+				]
+			}
+		},
+		// 方法部分（当前为空）
+		methods: {
+			deepThinking(){
+				this.ds_bgc = "#000000"
+				console.log('背景色已更新为:', this.ds_bgc);
+			},
+			newChat(){
+				this.msg = '',
+				this.chatLists = []
+			},
+			// 可在此添加发送消息、切换模式、上传文件等方法
+			sendMsg() {
+				let msg = this.msg.trim() // 去除首尾空格
+				if (msg === "") {
+					// 必须输入对话内容
+					uni.showToast({
+						title: "主公 请输入",
+						duration: 1000
+					})
+					return
+				}
+				//数据正在处理
+				uni.showLoading({
+					title: "别吵 我在思考",
+					mask: true
+				})
+				console.log(this.msg)
+				//追加提问到对话列表
+				this.chatLists.push({
+					role: "user",
+					content: msg
+				})
+				uni.request({
+					url: 'http://172.23.241.16:8000/v1/chat/completions',
+					data: {
+						model: "/data/huggingface/deepseek-1.5B",
+						messages: [{
+								"role": "system",
+								"content": "你是很棒的AI助手"
+							},
+							{
+								"role": "user",
+								"content": msg
+							}
+						],
+						"stream": false
+					},
+					method: 'POST',
+					header: {
+						'Content-Type': 'application/json' //自定义请求头信息
+					},
+					success: (response) => {
+						let data = response.data.choices[0].message.content;
+						// this.text = 'request success';
+						let reasoning = data.match(/<think>([\s\S]*?)<\/think>/)?.[1]?.trim() || "";
+						let answer = data.replace(/<think>[\s\S]*?<\/think>/, "").trim();
+
+						console.log("推理部分：", reasoning);
+						console.log("回答部分：", answer)
+						//追加
+						this.chatLists.push({
+							role: 'assistant',
+							content: data
+						})
+						// 关闭提示框
+						uni.hideLoading()
+						// 输入框里面的数据需要清空
+						this.msg = ''
+					}
+				});
+			},
+			change(e) {
+				console.log('当前模式：' + e.type + ',状态：' + e.show);
+			},
+			toggle(type) {
+				this.type = type
+				// open 方法传入参数 等同在 uni-popup 组件上绑定 type属性
+				this.$refs.popup.open(type)
+			}
+		}
+	}
+</script>
